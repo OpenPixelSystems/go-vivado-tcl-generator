@@ -1,0 +1,34 @@
+# @file synth.tcl-template
+# @brief Template for generic TCL script creation 
+# @author Bram Vlerick <bram.vlerick@openpixelsystems.org>
+# @version v1.0
+# @date 2019-11-20
+#
+# @note This file is automatically converted. Do not make any manual changes here!
+
+# Default values
+set output_proj {{.Project_name}}
+set top_level_name "top"
+set project {{.Project_name}}
+
+# Open the Vivado project
+open_project ${project}/${project}.xpr
+update_compile_order -fileset sources_1
+
+# Reset previous runs
+reset_run synth_1
+
+# Implementation
+launch_runs impl_1 -jobs 8
+wait_on_run impl_1
+
+# Generate a bitstream
+open_run impl_1
+write_bitstream -force ./${project}/${project}.runs/impl_1/${top_level_name}.bit
+close_design
+
+# Create SDK directory if it does not exist
+file mkdir ${project}/${output_proj}.sdk
+file copy -force ${project}/${project}.runs/impl_1/${top_level_name}.bit ${project}/${output_proj}.sdk/${output_proj}.bit
+file copy -force ${project}/${project}.runs/impl_1/${top_level_name}.bit ${output_proj}.bit
+write_hwdef -force -file ${project}/${output_proj}.sdk/${output_proj}.hdf

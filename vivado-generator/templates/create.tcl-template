@@ -1,0 +1,123 @@
+# @file create.tcl-template
+# @brief Template for generic TCL script creation 
+# @author Bram Vlerick <bram.vlerick@openpixelsystems.org>
+# @version v1.0
+# @date 2019-11-20
+#
+# @note This file is automatically converted. Do not make any manual changes here!
+
+# Set default values
+set _xil_proj_name_ {{.Project_name}}
+
+set source_dir {{.Source_directory}}
+set repo_dir {{.Ip_repository_directory}}
+set board_name {{.Board_name}}
+set board_id {{.Board_id}}
+set part {{.Partnum}}
+
+set top_lvl_tcl {{.Top_tcl_name}}
+
+set original_bd_path {{.Orig_bd_path}}
+set original_hdl_path {{.Orig_hdl_path}}
+set original_xdr_path {{.Orig_xdr_path}}
+
+set fpga_part {{.Partnum}} 
+
+set workproj {{.Project_name}}
+
+# Create project
+create_project -force $workproj $workproj -part ${part}
+
+set proj_dir [get_property directory [current_project]]
+
+# Set project properties
+set obj [get_projects $workproj]
+set_property "board_part" $board_name $obj
+{{if .Board_id_used}}
+set_property "platform.board_id" $board_id $obj
+{{- end}}
+set_property "default_lib" "xil_defaultlib" $obj
+set_property "simulator_language" "Mixed" $obj
+set_property "target_language" "VHDL" $obj
+
+if {[string equal [get_filesets -quiet sources_1] ""]} {
+	create_fileset -srcset sources_1
+}
+
+# Set IP repository paths
+set obj [get_filesets sources_1]
+set_property "ip_repo_paths" "[file normalize "$repo_dir"]" $obj
+
+# Load project TCL (Usually zynq-sys.tcl)
+source $original_bd_path$top_lvl_tcl
+
+# Create the PS + wrapper
+# This should create some extra variables!!
+# such as: 
+# - origin_dir is now set to the bd path
+# - str_bd_folder is the new block design folder
+# - str_bd_filepath is the new location of the generated block design with
+# filename!
+set bd_wrapper $str_bd_folder/$workproj/hdl/{{.Project_name_raw}}_wrapper.vhd
+make_wrapper -files [get_files $str_bd_filepath] -top
+add_files -norecurse $bd_wrapper
+
+# Set 'sources_1' fileset object
+set obj [get_filesets sources_1]
+
+{{if .Local_hdl_files}}
+# Get all HDL sources
+set vhdl_files [glob -nocomplain -type {f} -directory "$original_hdl_path" "*.vhd"]
+if {[llength $vhdl_files] != 0 } {
+	foreach file $vhdl_files {
+		add_files -norecurse -fileset $obj $file
+		set file_obj [get_files -of_objects [get_filesets sources_1] [list "$file"]]
+		set_property "file_type" "VHDL" $file_obj
+	}
+} else {
+	puts "No extra VHDL Files"
+}
+{{- end}}
+
+# Set 'sources_1' fileset properties
+set obj [get_filesets sources_1]
+
+# Create 'constrs_1' fileset (if not found)
+if {[string equal [get_filesets -quiet constrs_1] ""]} {
+	create_fileset -constrset constrs_1
+}
+
+# Set 'constrs_1' fileset object
+set obj [get_filesets constrs_1]
+
+# Add/Import constrs file and set constrs file properties
+set xdc_files [glob -nocomplain -type {f} -directory "$original_xdr_path" "*.xdc"]
+if {[llength $xdc_files] != 0 } {
+	foreach file $xdc_files {
+		add_files -norecurse -fileset $obj $file
+		set file_obj [get_files -of_objects [get_filesets constrs_1] [list "$file"]]
+		set_property "file_type" "XDC" $file_obj
+	}
+}
+
+# Set 'constrs_1' fileset properties
+set obj [get_filesets constrs_1]
+set_property "target_constrs_file" "$original_xdr_path/other.xdc" $obj
+
+# Create 'synth_1' run (if not found)
+if {[string equal [get_runs -quiet synth_1] ""]} {
+	create_run -name synth_1 -part $fpga_part -flow {Vivado Synthesis 2018} -strategy "Vivado Synthesis Defaults" -constrset constrs_1
+} else {
+	set_property strategy "Vivado Synthesis Defaults" [get_runs synth_1]
+	set_property flow "Vivado Synthesis 2018" [get_runs synth_1]
+}
+set obj [get_runs synth_1]
+
+# Create 'impl_1' run (if not found)
+if {[string equal [get_runs -quiet impl_1] ""]} {
+	create_run -name impl_1 -part $fpga_part -flow {Vivado Implementation 2018} -strategy "Vivado Implementation Defaults" -constrset constrs_1 -parent_run synth_1
+} else {
+	set_property strategy "Vivado Implementation Defaults" [get_runs impl_1]
+	set_property flow "Vivado Implementation 2018" [get_runs impl_1]
+}
+set obj [get_runs impl_1]

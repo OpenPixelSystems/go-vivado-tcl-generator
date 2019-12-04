@@ -1,0 +1,38 @@
+# @file Makefile
+# @brief Generic makefile for Vivido tcl build 
+# @author Bram Vlerick <bram.vlerick@openpixelsystems.org>
+# @version v1.0
+# @date 2019-02-13
+
+SHELL := /bin/bash
+
+.NOTPARALLEL: all
+
+all: build_proj gen_dts gen_dtb
+
+create_proj:
+	vivado -mode batch -source ./create.tcl
+synth_proj: create_proj
+	vivado -mode batch -source ./synth.tcl
+
+build_proj: synth_proj
+	vivado -mode batch -source ./run.tcl
+
+gen_dts:
+	- git clone git://github.com/Xilinx/device-tree-xlnx.git
+	vivado -mode batch -source ./gen-dts.tcl
+gen_dtb:
+	sed -i -e 's/\#include/\/include\//g' build/bsp/system-top.dts
+	cd build/bsp/ && dtc -I dts -O dtb -o system-ops.dtb ./system-top.dts
+	cp build/bsp/system-ops.dtb ./
+clean:
+	- rm -rf build
+	- rm -rf project.sdk
+	- rm -rf .Xil
+	- rm -rf reports
+	- rm *.log
+	- rm *.jou
+	- rm *.dtb
+	- rm *.rpt
+	- rm *.bit
+	- rm -rf repos

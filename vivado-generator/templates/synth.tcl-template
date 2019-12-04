@@ -1,0 +1,26 @@
+# @file synth.tcl-template
+# @brief Template for generic TCL script creation 
+# @author Bram Vlerick <bram.vlerick@openpixelsystems.org>
+# @version v1.0
+# @date 2019-11-20
+#
+# @note This file is automatically converted. Do not make any manual changes here!
+
+# Default values
+set project {{.Project_name}}
+
+# Open the Vivado project
+open_project $project/${project}.xpr
+update_compile_order -fileset sources_1
+
+# Reset previous runs
+reset_run synth_1
+
+# Implementation
+launch_runs synth_1 -jobs 8
+wait_on_run synth_1
+
+open_run synth_1
+report_utilization -file post_synth_rout_util.rpt
+close_design
+
