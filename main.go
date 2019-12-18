@@ -38,6 +38,11 @@ func main() {
 		return
 	}
 
+	for i, arg := range argsWithoutProg {
+		argsWithoutProg[i] = strings.Replace(arg, "\"", "", -1)
+	}
+	fmt.Println(argsWithoutProg)
+
 	source_dir := argsWithoutProg[0]
 	xpr_file := argsWithoutProg[1]
 	bd_file := argsWithoutProg[2]
