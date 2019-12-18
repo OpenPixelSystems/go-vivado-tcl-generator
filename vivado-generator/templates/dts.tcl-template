@@ -7,7 +7,7 @@
 # @note This file is automatically converted. Do not make any manual changes here!
 
 # Default values
-set output_proj "bbr_bd"
+set output_proj {{.Project_name}}
 
 hsi::open_hw_design ${output_proj}/${output_proj}.sdk/${output_proj}.hdf 
 hsi::set_repo_path ./device-tree-xlnx/
